@@ -1,71 +1,65 @@
 #include "BlueMagicCameraConnection.h"
 
-BLERemoteCharacteristic *BlueMagicCameraConnection::_cameraStatus;
-BLERemoteCharacteristic *BlueMagicCameraConnection::_deviceName;
-BLERemoteCharacteristic *BlueMagicCameraConnection::_timecode;
-BLERemoteCharacteristic *BlueMagicCameraConnection::_outgoingCameraControl;
-BLERemoteCharacteristic *BlueMagicCameraConnection::_incomingCameraControl;
 
-static BLEUUID OutgoingCameraControl("5DD3465F-1AEE-4299-8493-D2ECA2F8E1BB");
-static BLEUUID IncomingCameraControl("B864E140-76A0-416A-BF30-5876504537D9");
-static BLEUUID Timecode("6D8F2110-86F1-41BF-9AFB-451D87E976C8");
-static BLEUUID CameraStatus("7FE8691D-95DC-4FC5-8ABD-CA74339B51B9");
-static BLEUUID DeviceName("FFAC0C52-C9FB-41A0-B063-CC76282EB89C");
-
-static BLEUUID ServiceId("00001800-0000-1000-8000-00805f9b34fb");
-static BLEUUID BmdCameraService("291D567A-6D75-11E6-8B77-86F30CA893D3");
+#define USE_NOTIFICATION_STATUS 0
+#define USE_NOTIFICATION_TIMECODE 0
+#define LIST_WRONG_DEVICES 0
 
 
-void printHex( uint8_t num ) {
-  char hexCar[2];
+BLERemoteCharacteristic* BlueMagicCameraConnection::_cameraStatus = nullptr;
+BLERemoteCharacteristic* BlueMagicCameraConnection::_deviceName = nullptr;
+BLERemoteCharacteristic* BlueMagicCameraConnection::_timecode = nullptr;
+BLERemoteCharacteristic* BlueMagicCameraConnection::_outgoingCameraControl = nullptr;
+BLERemoteCharacteristic* BlueMagicCameraConnection::_incomingCameraControl = nullptr;
 
-  sprintf(hexCar, "%02X", num);
-  Serial.print(hexCar);
-}
+static BLEUUID OutgoingCameraControl( "5DD3465F-1AEE-4299-8493-D2ECA2F8E1BB" );
+static BLEUUID IncomingCameraControl( "B864E140-76A0-416A-BF30-5876504537D9" );
+static BLEUUID Timecode( "6D8F2110-86F1-41BF-9AFB-451D87E976C8" );
+static BLEUUID CameraStatus( "7FE8691D-95DC-4FC5-8ABD-CA74339B51B9" );
+static BLEUUID DeviceName( "FFAC0C52-C9FB-41A0-B063-CC76282EB89C" );
+static BLEUUID ServiceId( "00001800-0000-1000-8000-00805f9b34fb" );
+static BLEUUID BmdCameraService( "291D567A-6D75-11E6-8B77-86F30CA893D3" );
 
 
-static void cameraStatusNotify(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
+//void printHex( uint8_t num ) { char hexCar[2]; sprintf(hexCar, "%02X", num); Serial.print(hexCar); }
+
+
+static void cameraStatusNotify( BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify )
 {
   BlueMagicState *blu = BlueMagicState::getInstance();
 
-  blu->statusNotify(true, pData);
-  blu->setCameraStatus(pData[0]);
+  blu->statusNotify( true, pData );
+  blu->setCameraStatus( pData[0] );
 }
 
-static void timeCodeNotify(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
+static void timeCodeNotify( BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify )
 {
-  BlueMagicState *blu = BlueMagicState::getInstance();
+  BlueMagicState* blu = BlueMagicState::getInstance();
 
-  blu->timecodeNotify(true, pData);
+  blu->timecodeNotify( true, pData );
   
   // timecode
   uint8_t H, M, S, f;
-  H = (pData[11] / 16 * 10) + (pData[11] % 16);
-  M = (pData[10] / 16 * 10) + (pData[10] % 16);
-  S = (pData[9] / 16 * 10) + (pData[9] % 16);
-  f = (pData[8] / 16 * 10) + (pData[8] % 16);
+
+  H = ( pData[11] / 16 * 10 ) + ( pData[11] % 16 );
+  M = ( pData[10] / 16 * 10 ) + ( pData[10] % 16 );
+  S = ( pData[9]  / 16 * 10 ) + ( pData[9]  % 16 );
+  f = ( pData[8]  / 16 * 10 ) + ( pData[8]  % 16 );
   
-  blu->setTimecode(H, M, S, f);
+  blu->setTimecode( H, M, S, f );
 }
 
-static void controlNotify(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
+static void controlNotify( BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify )
 {
-  Serial.println("DEBUG: In controlNotify()" );
+  Serial.println( "DEBUG: In controlNotify()" );
 
   BlueMagicState *blu = BlueMagicState::getInstance();
 
-  blu->settingsNotify(true, pData);
+  blu->settingsNotify( true, pData );
   
   bool changed = false;
 
-  //Serial.println("");
-  //Serial.print("Packet: ");
-  //
-  //for ( int IdxByte = 0; IdxByte < length; IdxByte++) {
-  //  printHex( pData[IdxByte] );
-  //}
-  //
-  //Serial.println( "" );
+  //Serial.println(""); Serial.print("Packet: "); for( int IdxByte = 0; IdxByte < length; IdxByte++) { printHex( pData[IdxByte] ); } Serial.println( "" );
 
 
   // recording
@@ -195,24 +189,30 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
   void onResult(BLEAdvertisedDevice advertisedDevice)
   {
-    Serial.print("BLE Advertised Device found: ");
-    Serial.print( advertisedDevice.getAddress().toString().c_str() );
-    Serial.print(": ");
-    Serial.print( advertisedDevice.getName().c_str() );
+    Serial.print("BLE Advertised Device found: ");  Serial.print( advertisedDevice.getAddress().toString().c_str() );
+
+    if( advertisedDevice.haveName() )
+    {
+      Serial.print(": "); Serial.print( advertisedDevice.getName().c_str() );
+    }
+
 
     if (advertisedDevice.haveServiceUUID() && advertisedDevice.getServiceUUID().equals(ServiceId))
     {
-      Serial.print(" - SERVICE UUID: ");
-      Serial.println( advertisedDevice.getServiceUUID().toString().c_str() );      
-      Serial.println("Stopping bluetooth scan.");
+      Serial.print(": "); Serial.println( advertisedDevice.getServiceUUID().toString().c_str() );      
+      Serial.println();
+
+      Serial.println("DEBUG: Stopping bluetooth scan.");
 
       advertisedDevice.getScan()->stop();
     } 
+#if LIST_WRONG_DEVICES    
     else
     {
       Serial.print(" - WRONG SERVICE UUID: ");
       Serial.println( advertisedDevice.getServiceUUID().toString().c_str() );
     }
+#endif    
   }
 };
 
@@ -328,7 +328,7 @@ void BlueMagicCameraConnection::begin(String name)
   _device.setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
   _device.setSecurityCallbacks(new MySecurity());
 
-  BLESecurity *pSecurity = new BLESecurity();
+  BLESecurity* pSecurity = new BLESecurity();
 
   pSecurity->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_BOND);
   pSecurity->setCapability(ESP_IO_CAP_IN);
@@ -375,75 +375,105 @@ bool BlueMagicCameraConnection::available()
   return connected() && (_cameraControl != nullptr);
 }
 
-bool BlueMagicCameraConnection::connectToServer(BLEAddress address)
+bool BlueMagicCameraConnection::connectToServer( BLEAddress address )
 {
-  Serial.print( "DEBUG: Connecting to server: " );
-  Serial.println( address.toString().c_str() );
+  Serial.println( "DEBUG: Creating client for device: " );
 
   _client = _device.createClient();
-  setState(CAMERA_CONNECTING);
-  _client->connect(address);
 
-  BLERemoteService *pRemoteService = _client->getService(BmdCameraService);
+  setState( CAMERA_CONNECTING );
+  
+  Serial.print( "DEBUG: Connecting to device: " ); Serial.println( address.toString().c_str() );
+
+  _client->connect( address );
+
+  Serial.println( "DEBUG: Getting Remote Service." );
+  
+  BLERemoteService *pRemoteService = _client->getService( BmdCameraService );
+  
   if (pRemoteService == nullptr)
   {
-    Serial.print("Failed to find our service UUID: ");
-    Serial.println(BmdCameraService.toString().c_str());
+    Serial.print("Failed to find our service UUID: "); Serial.println(BmdCameraService.toString().c_str());
     return false;
   }
 
-  _deviceName = pRemoteService->getCharacteristic(DeviceName);
+
+  _deviceName = pRemoteService->getCharacteristic( DeviceName );
+
   if (_deviceName != nullptr)
   {
     _deviceName->writeValue(_name.c_str(), _name.length());
   }
 
-  _outgoingCameraControl = pRemoteService->getCharacteristic(OutgoingCameraControl);
-  if (_outgoingCameraControl == nullptr)
+
+  Serial.println( "DEBUG: Getting Outgoing Characteristic." );
+
+  _outgoingCameraControl = pRemoteService->getCharacteristic( OutgoingCameraControl );
+
+  if( _outgoingCameraControl == nullptr )
   {
-    Serial.print("Failed to find our characteristic UUID: ");
-    Serial.println(OutgoingCameraControl.toString().c_str());
+    Serial.print("Failed to find our characteristic UUID: "); Serial.println(OutgoingCameraControl.toString().c_str());
     return false;
   }
 
-  _incomingCameraControl = pRemoteService->getCharacteristic(IncomingCameraControl);
-  if (_incomingCameraControl == nullptr)
+
+  Serial.println( "DEBUG: Getting Incoming Characteristic." );
+
+  _incomingCameraControl = pRemoteService->getCharacteristic( IncomingCameraControl );
+  
+  if( _incomingCameraControl == nullptr )
   {
-    Serial.print("Failed to find our characteristic UUID: ");
-    Serial.println(IncomingCameraControl.toString().c_str());
+    Serial.print("Failed to find our characteristic UUID: "); Serial.println(IncomingCameraControl.toString().c_str());
     return false;
   }
-  _incomingCameraControl->registerForNotify(controlNotify, true);
+
+
+  _incomingCameraControl->registerForNotify( controlNotify, true );
+
+
+#if USE_NOTIFICATION_TIMECODE
+  Serial.println( "DEBUG: Getting Timecode Characteristic." );
 
   _timecode = pRemoteService->getCharacteristic(Timecode);
+  
   if (_timecode == nullptr)
   {
-    Serial.print("Failed to find our characteristic UUID: ");
-    Serial.println(Timecode.toString().c_str());
+    Serial.print("Failed to find our characteristic UUID: "); Serial.println(Timecode.toString().c_str());
     return false;
   }
-  _timecode->registerForNotify(timeCodeNotify);
 
-  _cameraStatus = pRemoteService->getCharacteristic(CameraStatus);
+
+  _timecode->registerForNotify( timeCodeNotify );
+#endif
+
+#if USE_NOTIFICATION_STATUS
+  Serial.println( "DEBUG: Getting Status Characteristic." );
+
+  _cameraStatus = pRemoteService->getCharacteristic( CameraStatus );
+  
   if (_cameraStatus == nullptr)
   {
-    Serial.print("Failed to find our characteristic UUID: ");
-    Serial.println(CameraStatus.toString().c_str());
+    Serial.print("Failed to find our characteristic UUID: "); Serial.println(CameraStatus.toString().c_str());
     return false;
   }
-  _cameraStatus->registerForNotify(cameraStatusNotify);
 
-  setState(CAMERA_CONNECTED);
+
+  _cameraStatus->registerForNotify( cameraStatusNotify );
+#endif
+
+
+  setState( CAMERA_CONNECTED );
+
   setController();
 
-  Serial.println( "Connected to server!" );
+  Serial.println( "DEBUG: Connected to device!" );
 
   return true;
 }
 
 void BlueMagicCameraConnection::setController()
 {
-  _cameraControl = new BlueMagicCameraController(_outgoingCameraControl);
+  _cameraControl = new BlueMagicCameraController( _outgoingCameraControl );
 }
 
 void BlueMagicCameraConnection::setState(CONNECTION_STATE state)
@@ -488,56 +518,66 @@ BlueMagicCameraController *BlueMagicCameraConnection::connect(uint8_t index)
     return _cameraControl;
   }
 
+
   bool ok = false;
   
   Serial.println( "DEBUG: Starting scanning for devices." );
   
   bool scanned = scan( false, 5 ); //ORIGIN: scan( false, 5 )
 
-  BLEAddress address = BLEAddress("FF:FF:FF:FF:FF");
+  Serial.println( "DEBUG: Scan complete." );
 
-  if (scanned)
+  BLEAddress address = BLEAddress( "FF:FF:FF:FF:FF" );
+
+  if( scanned )
   {
     Serial.println( "DEBUG: Checking scan results." );
 
     int count = _bleScan->getResults().getCount();
 
-    if (count > 0)
+    if( count > 0 )
     {
-      Serial.print( "DEBUG: Found " );
-      Serial.print( count );
-      Serial.println( " devices." );
+      Serial.print( "DEBUG: Found " ); Serial.print( count ); Serial.println( " devices." );
 
-      //int foundIndex = count - 1;
-
-      for( int IdxDevice = 0; IdxDevice < count; ++IdxDevice )
+      for( int IdxDevice = count - 1; IdxDevice >= 0; --IdxDevice )
       {
-        auto CurDevice = _bleScan->getResults().getDevice(IdxDevice);
+        auto CurDevice = _bleScan->getResults().getDevice( IdxDevice );
 
         address = CurDevice.getAddress();
 
-        Serial.print("BLE Advertised Device found: ");
-        Serial.print( address.toString().c_str() );
-        Serial.print(": ");
-        Serial.print( CurDevice.getName().c_str() );
-
-        if (CurDevice.haveServiceUUID() && CurDevice.getServiceUUID().equals(ServiceId))
+        if( CurDevice.haveServiceUUID() && CurDevice.getServiceUUID().equals( ServiceId ) )
         {
-          Serial.print(" - SERVICE UUID: ");
-          Serial.println( CurDevice.getServiceUUID().toString().c_str() );      
-          Serial.println("Stopping bluetooth scan.");
+          Serial.print("DEBUG: Device #" ); Serial.print( IdxDevice );
+          Serial.print(": BlackMagic Device: "); Serial.print( address.toString().c_str() );
+
+          if( CurDevice.haveName() )
+          {
+            Serial.print(": "); Serial.print( CurDevice.getName().c_str() );
+          }
+
+
+          Serial.print(": "); Serial.println( CurDevice.getServiceUUID().toString().c_str() );
           
           ok = connectToServer(address);
 
           break;
-        } 
+        }
+#if LIST_WRONG_DEVICES        
         else
         {
-          Serial.print(" - WRONG SERVICE UUID: ");
-          Serial.println( CurDevice.getServiceUUID().toString().c_str() );
+          Serial.print("DEBUG: Other Device found: "); Serial.print( address.toString().c_str() );
+
+          if( CurDevice.haveName() )
+          {
+            Serial.print(": "); Serial.print( CurDevice.getName().c_str() );
+          }
+
+
+          Serial.print(": "); Serial.println( CurDevice.getServiceUUID().toString().c_str() );          
         }
-      }      
-    } else 
+#endif
+      }
+    } else
     {
       Serial.println( "DEBUG: Found 0 devices!" );
     }
@@ -545,18 +585,14 @@ BlueMagicCameraController *BlueMagicCameraConnection::connect(uint8_t index)
   else
   {
     address = *getCameraAddress();
-    
-    Serial.print( "DEBUG: trying to connect to device: " );
-    Serial.println( address.toString().c_str() );
 
-    ok = connectToServer(address);
+    ok = connectToServer( address );
   }
 
-  if (ok)
-  {
-    Serial.println( "DEBUG: Connected ok. Trying to authenticate." );
 
-    setAuthentication(true);
+  if( ok )
+  {
+    setAuthentication( true );
 
 #if USE_PREFERENCES
     _pref->begin(_name.c_str(), false);
@@ -565,15 +601,15 @@ BlueMagicCameraController *BlueMagicCameraConnection::connect(uint8_t index)
     _pref->end();
 #endif  
     
-    setCameraAddress(address);
+    setCameraAddress( address );
   
-    Serial.println( "DEBUG: Found camera - returning CameraControl." );
+    Serial.println( "DEBUG: Connected to Blackmagic camera." );
 
     return _cameraControl;
   }
 
 
-  Serial.println( "DEBUG: Failed to aqquire bluetooth device, terminating!" );
+  Serial.println( "DEBUG: Failed to connect to Blackmagic camera, terminating!" );
   
   return nullptr;
 }
