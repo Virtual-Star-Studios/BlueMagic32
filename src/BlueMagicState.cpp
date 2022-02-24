@@ -18,13 +18,17 @@ BlueMagicState::BlueMagicState()
 
 void BlueMagicState::setChanged(bool changed)
 {
+    Serial.print( "SetChanged: " ); Serial.println( changed ? 1 : 0 );
+
     _changed = changed;
 }
 
 bool BlueMagicState::changed()
 {
     bool changed = _changed;
+
     _changed = false;
+
     return changed;
 }
 

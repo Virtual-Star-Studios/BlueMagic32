@@ -1,5 +1,6 @@
 #include "BlueMagicCameraController.h"
 
+
 double mapf(double val, double in_min, double in_max, double out_min, double out_max)
 {
   return (val - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -213,7 +214,7 @@ void BlueMagicCameraController::zoom(float zoom)
 
 float BlueMagicCameraController::getZoom()
 {
-  return 0.0;
+  return _state->getZoom();
 }
 
 void BlueMagicCameraController::aperture(float value)

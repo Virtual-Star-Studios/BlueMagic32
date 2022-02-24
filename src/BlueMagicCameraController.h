@@ -1,5 +1,4 @@
 #ifndef BlueMagicCameraController_h
-
 #define BlueMagicCameraController_h
 
 #include <BLEDevice.h>
@@ -115,11 +114,19 @@ public:
 
 private:
   friend class BlueMagicCameraConnection;
+
+
+private:
   BlueMagicCameraController(BLERemoteCharacteristic *outgoingCameraControl);
-  BLERemoteCharacteristic *_cameraControl;
-  BlueMagicState *_state = BlueMagicState::getInstance();
-  uint8_t _cameraIndex = 255;
+
   uint32_t mapFloat(float value);
+
+
+private:
+  uint8_t _cameraIndex = 255;
+  
+  BlueMagicState* _state = BlueMagicState::getInstance();
+  BLERemoteCharacteristic* _cameraControl = nullptr;
 };
 
 #endif
