@@ -16,7 +16,10 @@ private:
     uint8_t _status = 0;
 
     float _aperture = 0;
+
     float _focus = 0;
+    float _focusErrorRange = 0.F;
+
     int16_t _zoom = 0;
 
     int32_t _iso = 0;
@@ -74,8 +77,9 @@ public:
     void setAperture(float aperture);
     float getAperture();
 
-    void setFocus(float aperture);
+    void setFocus( float focus, float errorRange = 0.F );
     float getFocus();
+    float getFocusErrorRange();
 
     void setZoom(int16_t zoom);
     int16_t getZoom();

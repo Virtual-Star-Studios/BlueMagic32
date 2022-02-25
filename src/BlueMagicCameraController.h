@@ -71,6 +71,8 @@ public:
 
   void focus(float value);
   float getFocus();
+  float getFocusErrorRange();
+  
   void instantAutoFocus();
 
   void ois(bool enabled);

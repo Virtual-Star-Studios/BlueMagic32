@@ -18,8 +18,6 @@ BlueMagicState::BlueMagicState()
 
 void BlueMagicState::setChanged(bool changed)
 {
-    Serial.print( "SetChanged: " ); Serial.println( changed ? 1 : 0 );
-
     _changed = changed;
 }
 
@@ -136,14 +134,20 @@ float BlueMagicState::getAperture()
     return _aperture;
 }
 
-void BlueMagicState::setFocus(float focus)
+void BlueMagicState::setFocus( float focus, float errorRange )
 {
     _focus = focus;
+    _focusErrorRange = errorRange;
 }
 
 float BlueMagicState::getFocus()
 {
     return _focus;
+}
+
+float BlueMagicState::getFocusErrorRange()
+{
+    return _focusErrorRange;
 }
 
 void BlueMagicState::setZoom(int16_t zoom)

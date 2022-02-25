@@ -198,6 +198,11 @@ float BlueMagicCameraController::getFocus()
   return _state->getFocus();
 }
 
+float BlueMagicCameraController::getFocusErrorRange()
+{
+  return _state->getFocusErrorRange();
+}
+
 void BlueMagicCameraController::zoom(float zoom)
 {
   if (zoom < 0 && zoom > 1)
