@@ -314,7 +314,29 @@ static void controlNotify( BLERemoteCharacteristic* pBLERemoteCharacteristic, ui
 
   //Unknown packet: Length: 12: 0xFF 0x08 0x00 0x00 0x0C 0x0B 0x05 0x02 0x32 0x34 0x6D 0x6D
   //Zoom!
-  else if( pData[0] == 0xFF && pData[4] == 0x0C && pData[5] == 0x0B ) { changed = true; }
+  else if( pData[0] == 0xFF && pData[4] == 0x0C && pData[5] == 0x0B ) 
+  {
+#if 1      
+      String Str;
+      
+      for( int IdxChr = 8; IdxChr < 24; ++IdxChr )
+      {
+        if( !isPrintable( pData[IdxChr] ) )
+        {
+          break;
+        }
+
+
+        Str.concat( (char)pData[IdxChr] );
+      }
+      
+
+      Serial.print( "DEBUG: Zoom String: " ); Serial.println( Str );
+#endif
+
+
+    changed = true;
+  }
 
 
   //Unknown packet: Length: 24: 0xFF 0x14 0x00 0x00 0x0C 0x0C 0x05 0x02 0x31 0x31 0x36 0x30 0x6D 0x6D 0x20 0x74 0x6F 0x20 0x31 0x32 0x32 0x30 0x6D 0x6D
